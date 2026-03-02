@@ -82,3 +82,41 @@ func TestConfiguration_CleanConfig_NoFindings(t *testing.T) {
 		}
 	}
 }
+
+func TestConfig_S4_NoAPIKey(t *testing.T) {
+	d := NewConfigurationDetector()
+	cfg := &types.OpenClawConfig{APIKey: ""}
+	f := d.checkC4APIKeyInConfig(cfg)
+	if f != nil {
+		t.Errorf("expected nil finding for empty APIKey, got %s", f.ID)
+	}
+}
+
+func TestConfig_C6_GatewayAuthEnabled(t *testing.T) {
+	d := NewConfigurationDetector()
+	cfg := &types.OpenClawConfig{Gateway: types.GatewayConfig{Auth: true}}
+	f := d.checkC6GatewayAuth(cfg)
+	if f != nil {
+		t.Errorf("expected nil finding when Auth is true, got %s", f.ID)
+	}
+}
+
+func TestConfig_AllClean(t *testing.T) {
+	d := NewConfigurationDetector()
+	cfg := &types.OpenClawConfig{
+		DangerouslySkipPermissions: false,
+		DMPolicy:                   "closed",
+		WorkspaceDir:               "~/.openclaw/workspace",
+		APIKey:                     "",
+		Gateway:                    types.GatewayConfig{Bind: "127.0.0.1", Auth: true},
+		Tailscale:                  types.TailscaleConfig{Enabled: false, Auth: true},
+		SSH:                        types.SSHConfig{Enabled: false, Auth: true},
+	}
+	findings := d.Detect(cfg)
+	if len(findings) != 0 {
+		t.Errorf("expected zero findings for fully clean config, got %d", len(findings))
+		for _, f := range findings {
+			t.Logf("Unexpected finding: %s - %s", f.ID, f.Title)
+		}
+	}
+}

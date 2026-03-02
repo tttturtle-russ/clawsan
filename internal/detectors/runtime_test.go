@@ -138,3 +138,79 @@ func TestRuntime_NilWorkspaceForR1R2_StillChecksTools(t *testing.T) {
 		t.Fatalf("expected at least 2 findings from tools-only runtime checks, got %d", len(findings))
 	}
 }
+
+func TestRuntime_R2_CameraPermission(t *testing.T) {
+	d := NewRuntimeDetector()
+	tools := []parser.MCPTool{{Name: "photo-tool", Description: "Use capture_photo to take pictures from device camera"}}
+
+	findings := d.checkR2MobileNodePermissionAudit(nil, tools)
+	if len(findings) == 0 {
+		t.Fatal("expected R2 finding for camera permission, got 0")
+	}
+	if findings[0].ID != "RUNTIME-002" {
+		t.Errorf("expected RUNTIME-002, got %s", findings[0].ID)
+	}
+	if findings[0].Severity != types.SeverityHigh {
+		t.Errorf("expected HIGH, got %s", findings[0].Severity)
+	}
+}
+
+func TestRuntime_R3_CDPPortInToolDescription(t *testing.T) {
+	d := NewRuntimeDetector()
+	tools := []parser.MCPTool{{Name: "browser-tool", Description: "Connects using remote_debugging_port for browser control"}}
+	cfg := &types.OpenClawConfig{Gateway: types.GatewayConfig{Bind: "127.0.0.1", Auth: true}}
+
+	findings := d.checkR3BrowserCDPExposure(cfg, tools)
+	if len(findings) == 0 {
+		t.Fatal("expected R3 finding for remote_debugging_port in tool description, got 0")
+	}
+	if findings[0].ID != "RUNTIME-003" {
+		t.Errorf("expected RUNTIME-003, got %s", findings[0].ID)
+	}
+}
+
+func TestRuntime_R4_LoopbackNoFinding(t *testing.T) {
+	d := NewRuntimeDetector()
+	cfg := &types.OpenClawConfig{Gateway: types.GatewayConfig{Bind: "127.0.0.1", Auth: false}}
+
+	findings := d.checkR4WebhookEndpointAuth(cfg)
+	if len(findings) != 0 {
+		t.Errorf("expected 0 findings for loopback bind even with Auth:false, got %d", len(findings))
+	}
+}
+
+func TestRuntime_R6_FewChannels_NoFinding(t *testing.T) {
+	d := NewRuntimeDetector()
+	cfg := &types.OpenClawConfig{
+		DMPolicy:  "open",
+		AllowFrom: []string{"ch1", "ch2"},
+	}
+
+	findings := d.checkR6SessionIsolation(cfg)
+	if len(findings) != 0 {
+		t.Errorf("expected 0 findings for open policy with only 2 channels, got %d", len(findings))
+	}
+}
+
+func TestRuntime_AllClean(t *testing.T) {
+	d := NewRuntimeDetector()
+	cfg := &types.OpenClawConfig{
+		DMPolicy:  "closed",
+		AllowFrom: []string{"user-123"},
+		Gateway:   types.GatewayConfig{Bind: "127.0.0.1", Auth: true},
+		Tailscale: types.TailscaleConfig{Enabled: false, Auth: true},
+		SSH:       types.SSHConfig{Enabled: false, Auth: true},
+	}
+	tools := []parser.MCPTool{
+		{Name: "list_dir", Description: "List directory contents"},
+		{Name: "read_file", Description: "Read a file and return its contents"},
+	}
+
+	findings := d.Detect(nil, tools, cfg)
+	if len(findings) != 0 {
+		t.Errorf("expected 0 findings for clean config and clean tools, got %d", len(findings))
+		for _, f := range findings {
+			t.Logf("Unexpected: %s - %s", f.ID, f.Title)
+		}
+	}
+}
