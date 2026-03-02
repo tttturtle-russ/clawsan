@@ -120,3 +120,41 @@ func TestConfig_AllClean(t *testing.T) {
 		}
 	}
 }
+
+func TestConfiguration_NilConfig_NoFindings(t *testing.T) {
+	d := NewConfigurationDetector()
+	findings := d.Detect(nil)
+	if len(findings) != 0 {
+		t.Errorf("expected 0 findings for nil config, got %d", len(findings))
+	}
+}
+
+func TestConfiguration_EmptyConfig_HasExpectedFindings(t *testing.T) {
+	d := NewConfigurationDetector()
+	cfg := &types.OpenClawConfig{}
+	findings := d.Detect(cfg)
+	hasC6 := false
+	for _, f := range findings {
+		if f.ID == "CONFIG-006" {
+			hasC6 = true
+		}
+	}
+	if !hasC6 {
+		t.Errorf("expected CONFIG-006 from zero-value config (Auth defaults to false), got findings: %v", findings)
+	}
+}
+
+func TestConfiguration_C4_APIKeyDetection(t *testing.T) {
+	d := NewConfigurationDetector()
+	cfg := &types.OpenClawConfig{APIKey: "sk-1234567890abcdef1234567890abcdef"}
+	f := d.checkC4APIKeyInConfig(cfg)
+	if f == nil {
+		t.Fatal("expected CONFIG-004 finding for plausible API key, got nil")
+	}
+	if f.ID != "CONFIG-004" {
+		t.Errorf("expected CONFIG-004, got %s", f.ID)
+	}
+	if f.Severity != types.SeverityHigh {
+		t.Errorf("expected HIGH severity, got %s", f.Severity)
+	}
+}

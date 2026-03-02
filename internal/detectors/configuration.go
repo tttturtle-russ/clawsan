@@ -18,6 +18,9 @@ func NewConfigurationDetector() *ConfigurationDetector {
 
 // Detect runs all C1-C7 configuration checks
 func (d *ConfigurationDetector) Detect(cfg *types.OpenClawConfig) []types.Finding {
+	if cfg == nil {
+		return nil
+	}
 	var findings []types.Finding
 	if f := d.checkC1DangerouslySkipPermissions(cfg); f != nil {
 		findings = append(findings, *f)
