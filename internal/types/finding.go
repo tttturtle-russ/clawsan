@@ -15,6 +15,8 @@ const (
 	CategoryConfiguration = "CONFIGURATION"
 	CategoryDiscovery     = "DISCOVERY"
 	CategoryRuntime       = "RUNTIME"
+	CategorySkillContent  = "SKILL_CONTENT"
+	CategorySkillIdentity = "SKILL_IDENTITY"
 )
 
 // Finding represents a single security vulnerability detected
