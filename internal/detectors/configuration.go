@@ -178,7 +178,7 @@ func (d *ConfigurationDetector) checkC7TunnelAuth(cfg *types.OpenClawConfig) *ty
 		ID:          "CONFIG-007",
 		Severity:    types.SeverityHigh,
 		Category:    types.CategoryConfiguration,
-		Title:       fmt.Sprintf("%s enabled without authentication", strings.Title(tunnelType)),
+		Title:       fmt.Sprintf("%s enabled without authentication", strings.ToUpper(tunnelType[:1])+tunnelType[1:]),
 		Description: fmt.Sprintf("The %s enabled but does not require authentication. This creates a remote access path to your AI agent without any password protection.", tunnelType),
 		Remediation: "Enable authentication for the tunnel in config.json. Check OpenClaw's documentation for 'remote access security'.",
 	}

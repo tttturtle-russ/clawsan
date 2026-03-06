@@ -1,7 +1,7 @@
 package scanner
 
 import (
-	"log"
+	"time"
 
 	"github.com/tttturtle-russ/clawsan/internal/detectors"
 	"github.com/tttturtle-russ/clawsan/internal/parser"
@@ -9,21 +9,28 @@ import (
 	"github.com/tttturtle-russ/clawsan/internal/types"
 )
 
+// Version is set at build time via -ldflags "-X github.com/tttturtle-russ/clawsan/internal/scanner.Version=v1.2.3"
+var Version = "dev"
+
 func Scan(path string) (*types.ScanResult, error) {
+	start := time.Now()
+
 	cfg, err := parser.ParseConfig(path)
 	if err != nil {
 		return nil, err
 	}
 
+	var warnings []string
+
 	workspace, err := parser.ParseWorkspaceFiles(path)
 	if err != nil {
-		log.Printf("warning: could not parse workspace files: %v", err)
+		warnings = append(warnings, "could not parse workspace files: "+err.Error())
 		workspace = nil
 	}
 
 	tools, err := parser.ParseMCPTools(path)
 	if err != nil {
-		log.Printf("warning: could not parse MCP tools: %v", err)
+		warnings = append(warnings, "could not parse MCP tools: "+err.Error())
 		tools = []parser.MCPTool{}
 	}
 
@@ -33,7 +40,7 @@ func Scan(path string) (*types.ScanResult, error) {
 	}
 	installedSkills, err := parser.ParseSkillFiles(path, slugs)
 	if err != nil {
-		log.Printf("warning: could not parse skill files: %v", err)
+		warnings = append(warnings, "could not parse skill files: "+err.Error())
 		installedSkills = nil
 	}
 
@@ -68,11 +75,21 @@ func Scan(path string) (*types.ScanResult, error) {
 		allFindings = append(allFindings, skillIdentity.Detect(slugs)...)
 	}
 
-	score := scoring.CalculateScore(allFindings)
+	score, grade, critical, high, medium, low := scoring.Calculate(allFindings)
 
 	return &types.ScanResult{
 		Findings:    allFindings,
 		Score:       score,
+		Grade:       grade,
 		TotalChecks: 33,
+		Warnings:    warnings,
+		ScannedPath: path,
+		ScannedAt:   start,
+		Version:     Version,
+		DurationMs:  time.Since(start).Milliseconds(),
+		Critical:    critical,
+		High:        high,
+		Medium:      medium,
+		Low:         low,
 	}, nil
 }

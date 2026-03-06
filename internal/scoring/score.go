@@ -2,36 +2,42 @@ package scoring
 
 import "github.com/tttturtle-russ/clawsan/internal/types"
 
-// CalculateScore computes a severity-weighted vulnerability score from 0-100.
-// Starts with base score of 100 and deducts points for each finding based on severity:
-// - CRITICAL: 25 points each
-// - HIGH: 10 points each
-// - MEDIUM: 5 points each
-// - LOW: 1 point each
-// - INFO: 0 points each
-// Result is clamped to minimum 0 (never negative).
-func CalculateScore(findings []types.Finding) int {
-	score := 100
+// Severity deduction weights
+const (
+	weightCritical = 25
+	weightHigh     = 10
+	weightMedium   = 5
+	weightLow      = 1
+)
 
-	for _, finding := range findings {
-		switch finding.Severity {
+// CalculateScore computes a severity-weighted score from 0-100 and populates
+// all ScanResult aggregate fields (Grade, severity counts, Summary).
+func Calculate(findings []types.Finding) (score int, grade string, critical, high, medium, low int) {
+	score = 100
+	for _, f := range findings {
+		switch f.Severity {
 		case types.SeverityCritical:
-			score -= 25
+			score -= weightCritical
+			critical++
 		case types.SeverityHigh:
-			score -= 10
+			score -= weightHigh
+			high++
 		case types.SeverityMedium:
-			score -= 5
+			score -= weightMedium
+			medium++
 		case types.SeverityLow:
-			score -= 1
-		case types.SeverityInfo:
-			// INFO severity: no deduction
+			score -= weightLow
+			low++
 		}
 	}
-
-	// Clamp to minimum 0
 	if score < 0 {
 		score = 0
 	}
+	return score, types.ScoreToGrade(score), critical, high, medium, low
+}
 
+// CalculateScore is the legacy single-return wrapper kept for backward compatibility.
+func CalculateScore(findings []types.Finding) int {
+	score, _, _, _, _, _ := Calculate(findings)
 	return score
 }
