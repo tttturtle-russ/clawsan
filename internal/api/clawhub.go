@@ -7,49 +7,167 @@ import (
 	"time"
 )
 
-// ClawHubClient checks skills against the ClawHub reputation API
 type ClawHubClient struct {
 	BaseURL    string
 	HTTPClient *http.Client
 }
 
-// NewClawHubClient creates a new client with 5s timeout
 func NewClawHubClient() *ClawHubClient {
 	return &ClawHubClient{
-		BaseURL:    "https://api.clawhub.io/v1",
+		BaseURL:    "https://clawhub.ai/api/v1",
 		HTTPClient: &http.Client{Timeout: 5 * time.Second},
 	}
 }
 
-// SkillReputation holds reputation data for a skill
-type SkillReputation struct {
-	Name      string `json:"name"`
-	Malicious bool   `json:"malicious"`
-	Reason    string `json:"reason"`
+type skillOwner struct {
+	Handle      *string `json:"handle"`
+	DisplayName *string `json:"displayName"`
 }
 
-// CheckSkillReputation returns reputation info for a skill name.
-// Returns nil, nil if the API is unreachable (graceful offline fallback).
-func (c *ClawHubClient) CheckSkillReputation(skillName string) (*SkillReputation, error) {
-	url := fmt.Sprintf("%s/skills/%s/reputation", c.BaseURL, skillName)
-	resp, err := c.HTTPClient.Get(url)
+type skillModeration struct {
+	IsSuspicious     bool `json:"isSuspicious"`
+	IsMalwareBlocked bool `json:"isMalwareBlocked"`
+}
+
+type skillDetail struct {
+	Slug        string  `json:"slug"`
+	DisplayName string  `json:"displayName"`
+	Summary     *string `json:"summary"`
+}
+
+type skillResponse struct {
+	Skill         *skillDetail `json:"skill"`
+	LatestVersion *struct {
+		Version string `json:"version"`
+	} `json:"latestVersion"`
+	Moderation *skillModeration `json:"moderation"`
+	Owner      *skillOwner      `json:"owner"`
+}
+
+type versionSecurity struct {
+	Status      string `json:"status"`
+	HasWarnings bool   `json:"hasWarnings"`
+	CheckedAt   *int64 `json:"checkedAt"`
+	Model       string `json:"model"`
+}
+
+type versionResponse struct {
+	Version *struct {
+		Version  string           `json:"version"`
+		Security *versionSecurity `json:"security"`
+	} `json:"version"`
+}
+
+type SkillInfo struct {
+	Slug           string
+	DisplayName    string
+	KnownToClawHub bool
+	// SecurityStatus values: "clean", "suspicious", "malicious", "pending", "error", "" (not scanned).
+	SecurityStatus    string
+	HasWarnings       bool
+	SecurityCheckedAt *int64
+	IsMalwareBlocked  bool
+	IsSuspicious      bool
+	Malicious         bool
+	MaliciousReason   string
+}
+
+func (c *ClawHubClient) CheckSkillReputation(skillName string) (*SkillInfo, error) {
+	skillURL := fmt.Sprintf("%s/skills/%s", c.BaseURL, skillName)
+	resp, err := c.HTTPClient.Get(skillURL)
 	if err != nil {
-		// Network error = offline fallback (not fatal)
 		return nil, nil
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
-		// Unknown skill = not flagged
-		return &SkillReputation{Name: skillName, Malicious: false}, nil
-	}
-	if resp.StatusCode != 200 {
-		return nil, nil // API error = graceful fallback
+	switch resp.StatusCode {
+	case http.StatusNotFound:
+		return &SkillInfo{Slug: skillName, KnownToClawHub: false}, nil
+	case http.StatusForbidden:
+		return &SkillInfo{
+			Slug:            skillName,
+			KnownToClawHub:  true,
+			IsSuspicious:    true,
+			MaliciousReason: "skill is hidden by moderation (HTTP 403)",
+		}, nil
+	case http.StatusGone:
+		return &SkillInfo{
+			Slug:             skillName,
+			KnownToClawHub:   true,
+			IsMalwareBlocked: true,
+			Malicious:        true,
+			MaliciousReason:  "skill was removed by moderation (HTTP 410)",
+		}, nil
+	case http.StatusLocked:
+		return &SkillInfo{
+			Slug:           skillName,
+			KnownToClawHub: true,
+			SecurityStatus: "pending",
+		}, nil
+	case http.StatusOK:
+	default:
+		return nil, nil
 	}
 
-	var rep SkillReputation
-	if err := json.NewDecoder(resp.Body).Decode(&rep); err != nil {
-		return nil, nil // Parse error = graceful fallback
+	var body skillResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return nil, nil
 	}
-	return &rep, nil
+
+	info := &SkillInfo{KnownToClawHub: true}
+	if body.Skill != nil {
+		info.Slug = body.Skill.Slug
+		info.DisplayName = body.Skill.DisplayName
+	}
+
+	if body.Moderation != nil {
+		info.IsSuspicious = body.Moderation.IsSuspicious
+		info.IsMalwareBlocked = body.Moderation.IsMalwareBlocked
+		if info.IsMalwareBlocked {
+			info.Malicious = true
+			info.MaliciousReason = "flagged as malware by ClawHub moderation"
+		}
+	}
+
+	if body.LatestVersion != nil && body.LatestVersion.Version != "" {
+		c.fetchVersionSecurity(info, body.LatestVersion.Version)
+	}
+
+	return info, nil
+}
+
+func (c *ClawHubClient) fetchVersionSecurity(info *SkillInfo, version string) {
+	url := fmt.Sprintf("%s/skills/%s/versions/%s", c.BaseURL, info.Slug, version)
+	resp, err := c.HTTPClient.Get(url)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		if resp != nil {
+			resp.Body.Close()
+		}
+		return
+	}
+	defer resp.Body.Close()
+
+	var body versionResponse
+	if err := json.NewDecoder(resp.Body).Decode(&body); err != nil {
+		return
+	}
+
+	if body.Version == nil || body.Version.Security == nil {
+		return
+	}
+
+	sec := body.Version.Security
+	info.SecurityStatus = sec.Status
+	info.HasWarnings = sec.HasWarnings
+	info.SecurityCheckedAt = sec.CheckedAt
+
+	switch sec.Status {
+	case "malicious":
+		info.Malicious = true
+		if info.MaliciousReason == "" {
+			info.MaliciousReason = "ClawHub security scan verdict: malicious"
+		}
+	case "suspicious":
+		info.IsSuspicious = true
+	}
 }
