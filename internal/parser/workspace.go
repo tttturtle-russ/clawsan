@@ -7,20 +7,21 @@ import (
 	"strings"
 )
 
-// WorkspaceData holds the contents of OpenClaw workspace files
 type WorkspaceData struct {
-	AgentsMD      string // contents of AGENTS.md
-	ToolsMD       string // contents of TOOLS.md
-	HeartbeatMD   string // contents of HEARTBEAT.md
-	AgentsPath    string // absolute path to AGENTS.md
-	ToolsPath     string // absolute path to TOOLS.md
-	HeartbeatPath string // absolute path to HEARTBEAT.md
+	AgentsMD      string
+	ToolsMD       string
+	HeartbeatMD   string
+	SoulMD        string
+	MemoryMD      string
+	IdentityMD    string
+	AgentsPath    string
+	ToolsPath     string
+	HeartbeatPath string
+	SoulPath      string
+	MemoryPath    string
+	IdentityPath  string
 }
 
-// ParseWorkspaceFiles reads workspace markdown files from the given directory.
-// The workspacePath should be the OpenClaw installation root (e.g. ~/.openclaw/).
-// Workspace files are expected at workspacePath/workspace/
-// Missing files are not errors — they result in empty strings.
 func ParseWorkspaceFiles(installPath string) (*WorkspaceData, error) {
 	if strings.HasPrefix(installPath, "~/") {
 		home, err := os.UserHomeDir()
@@ -40,16 +41,21 @@ func ParseWorkspaceFiles(installPath string) (*WorkspaceData, error) {
 		AgentsPath:    filepath.Join(workspacePath, "AGENTS.md"),
 		ToolsPath:     filepath.Join(workspacePath, "TOOLS.md"),
 		HeartbeatPath: filepath.Join(workspacePath, "HEARTBEAT.md"),
+		SoulPath:      filepath.Join(workspacePath, "SOUL.md"),
+		MemoryPath:    filepath.Join(workspacePath, "MEMORY.md"),
+		IdentityPath:  filepath.Join(workspacePath, "IDENTITY.md"),
 	}
 
 	data.AgentsMD = readFileOrEmpty(data.AgentsPath)
 	data.ToolsMD = readFileOrEmpty(data.ToolsPath)
 	data.HeartbeatMD = readFileOrEmpty(data.HeartbeatPath)
+	data.SoulMD = readFileOrEmpty(data.SoulPath)
+	data.MemoryMD = readFileOrEmpty(data.MemoryPath)
+	data.IdentityMD = readFileOrEmpty(data.IdentityPath)
 
 	return data, nil
 }
 
-// readFileOrEmpty reads a file and returns its content, or empty string if it doesn't exist.
 func readFileOrEmpty(path string) string {
 	content, err := os.ReadFile(path)
 	if err != nil {

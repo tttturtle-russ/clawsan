@@ -1,19 +1,23 @@
 package types
 
-// OpenClawConfig represents the real openclaw configuration file (~/.openclaw/openclaw.json)
 type OpenClawConfig struct {
-	Gateway   GatewayConfig   `json:"gateway"`
-	Agents    AgentsConfig    `json:"agents"`
-	Skills    SkillsConfig    `json:"skills"`
-	Logging   LoggingConfig   `json:"logging"`
-	Discovery DiscoveryConfig `json:"discovery"`
-	Tools     ToolsConfig     `json:"tools"`
-	Meta      MetaConfig      `json:"meta"`
+	Gateway   GatewayConfig            `json:"gateway"`
+	Agents    AgentsConfig             `json:"agents"`
+	Skills    SkillsConfig             `json:"skills"`
+	Logging   LoggingConfig            `json:"logging"`
+	Discovery DiscoveryConfig          `json:"discovery"`
+	Tools     ToolsConfig              `json:"tools"`
+	Meta      MetaConfig               `json:"meta"`
+	Channels  map[string]ChannelConfig `json:"channels"`
+	Models    ModelsConfig             `json:"models"`
+	Session   SessionConfig            `json:"session"`
+	Acp       AcpConfig                `json:"acp"`
+	Sandbox   SandboxConfig            `json:"sandbox"`
 }
 
 type GatewayConfig struct {
-	Mode                string           `json:"mode"` // "local" | "remote"
-	Bind                string           `json:"bind"` // "loopback" | "lan" | "tailnet" | "auto" | "custom"
+	Mode                string           `json:"mode"`
+	Bind                string           `json:"bind"`
 	Auth                GatewayAuth      `json:"auth"`
 	ControlUi           GatewayControlUi `json:"controlUi"`
 	Tailscale           GatewayTailscale `json:"tailscale"`
@@ -22,7 +26,7 @@ type GatewayConfig struct {
 }
 
 type GatewayAuth struct {
-	Mode         string                `json:"mode"` // "none" | "token" | "password" | "trusted-proxy"
+	Mode         string                `json:"mode"`
 	Token        string                `json:"token"`
 	Password     string                `json:"password"`
 	TrustedProxy *GatewayTrustedProxy  `json:"trustedProxy"`
@@ -38,7 +42,7 @@ type GatewayControlUi struct {
 }
 
 type GatewayTailscale struct {
-	Mode        string `json:"mode"` // "off" | "serve" | "funnel"
+	Mode        string `json:"mode"`
 	ResetOnExit bool   `json:"resetOnExit"`
 }
 
@@ -79,7 +83,7 @@ type SkillEntryConfig struct {
 }
 
 type LoggingConfig struct {
-	RedactSensitive string `json:"redactSensitive"` // "off" disables redaction
+	RedactSensitive string `json:"redactSensitive"`
 }
 
 type DiscoveryConfig struct {
@@ -87,7 +91,7 @@ type DiscoveryConfig struct {
 }
 
 type MdnsConfig struct {
-	Mode string `json:"mode"` // "off" | "minimal" | "full"
+	Mode string `json:"mode"`
 }
 
 type ToolsConfig struct {
@@ -102,4 +106,46 @@ type ElevatedConfig struct {
 type MetaConfig struct {
 	LastTouchedVersion string `json:"lastTouchedVersion"`
 	LastTouchedAt      string `json:"lastTouchedAt"`
+}
+
+type SessionConfig struct {
+	DmScope string `json:"dmScope"`
+}
+
+type AcpConfig struct {
+	AutoApprove string `json:"autoApprove"`
+}
+
+type SandboxConfig struct {
+	Mode string `json:"mode"`
+}
+
+type ChannelConfig struct {
+	LoginMode   string            `json:"loginMode"`
+	Environment string            `json:"environment"`
+	QClaw       *QClawCredentials `json:"qclaw,omitempty"`
+	WorkBuddy   map[string]any    `json:"workbuddy,omitempty"`
+	Accounts    map[string]any    `json:"accounts,omitempty"`
+	DmPolicy    string            `json:"dmPolicy"`
+	GroupPolicy string            `json:"groupPolicy"`
+	AllowFrom   []string          `json:"allowFrom"`
+	AllowList   []string          `json:"allowlist"`
+}
+
+type QClawCredentials struct {
+	JwtToken     string `json:"jwtToken"`
+	ChannelToken string `json:"channelToken"`
+	ApiKey       string `json:"apiKey"`
+	Guid         string `json:"guid"`
+	UserId       string `json:"userId"`
+	WsUrl        string `json:"wsUrl"`
+}
+
+type ModelsConfig struct {
+	Providers map[string]ModelProviderConfig `json:"providers"`
+}
+
+type ModelProviderConfig struct {
+	ApiKey  string `json:"apiKey"`
+	BaseUrl string `json:"baseUrl"`
 }
