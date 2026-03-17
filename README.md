@@ -1,13 +1,13 @@
-# clawsan
+# ClawSanitizer
 
 **Security scanner for OpenClaw / Claude AI agent installations**
 
-[![CI](https://github.com/tttturtle-russ/clawsan/actions/workflows/ci.yml/badge.svg)](https://github.com/tttturtle-russ/clawsan/actions/workflows/ci.yml)
-[![Go Report Card](https://goreportcard.com/badge/github.com/tttturtle-russ/clawsan)](https://goreportcard.com/report/github.com/tttturtle-russ/clawsan)
+[![CI](https://github.com/tttturtle-russ/ClawSanitizer/actions/workflows/ci.yml/badge.svg)](https://github.com/tttturtle-russ/ClawSanitizer/actions/workflows/ci.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/tttturtle-russ/ClawSanitizer)](https://goreportcard.com/report/github.com/tttturtle-russ/ClawSanitizer)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![GitHub release](https://img.shields.io/github/v/release/tttturtle-russ/clawsan)](https://github.com/tttturtle-russ/clawsan/releases/latest)
+[![GitHub release](https://img.shields.io/github/v/release/tttturtle-russ/ClawSanitizer)](https://github.com/tttturtle-russ/ClawSanitizer/releases/latest)
 
-clawsan audits your OpenClaw installation against **56 security signals** mapped to the [OWASP Top 10 for LLM Applications 2025](https://owasp.org/www-project-top-10-for-large-language-model-applications/) and CWE. It gives you a security score, grade, and actionable remediation — plus SARIF output for GitHub's Security tab.
+ClawSanitizer audits your OpenClaw installation against **56 security signals** mapped to the [OWASP Top 10 for LLM Applications 2025](https://owasp.org/www-project-top-10-for-large-language-model-applications/) and CWE. It gives you a security score, grade, and actionable remediation — plus SARIF output for GitHub's Security tab.
 
 ```
  ██████╗██╗      █████╗ ██╗    ██╗███████╗ █████╗ ███╗   ██╗
@@ -17,7 +17,7 @@ clawsan audits your OpenClaw installation against **56 security signals** mapped
 ╚██████╗███████╗██║  ██║╚███╔███╔╝███████║██║  ██║██║ ╚████║
  ╚═════╝╚══════╝╚═╝  ╚═╝ ╚══╝╚══╝ ╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝
 
-  OpenClaw Security Scanner v1.0.0
+  OpenClaw Security Scanner v0.0.1
   Scanning: ~/.openclaw/
   Started:  2025-01-01T00:00:00Z
 ──────────────────────────────────────────────────────────────────────
