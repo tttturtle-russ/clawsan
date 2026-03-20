@@ -5,14 +5,19 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/tttturtle-russ/clawsan/internal/detectors/exclusions"
 	"github.com/tttturtle-russ/clawsan/internal/parser"
 	"github.com/tttturtle-russ/clawsan/internal/types"
 )
 
-type SkillContentDetector struct{}
+type SkillContentDetector struct {
+	exclusionChecker *exclusions.Checker
+}
 
 func NewSkillContentDetector() *SkillContentDetector {
-	return &SkillContentDetector{}
+	return &SkillContentDetector{
+		exclusionChecker: exclusions.NewChecker(),
+	}
 }
 
 func (d *SkillContentDetector) Detect(skills []parser.InstalledSkill) []types.Finding {
@@ -244,13 +249,21 @@ func (d *SkillContentDetector) checkSKILLMD(s *parser.InstalledSkill) []types.Fi
 	}
 
 	for _, re := range []*regexp.Regexp{reHardcodedAWS, reHardcodedGHPAT, reHardcodedNPM, reHardcodedOAI, reHardcodedSlack} {
-		if m := re.FindString(content); m != "" {
+		if loc := re.FindStringIndex(content); loc != nil {
+			match := content[loc[0]:loc[1]]
+			context := exclusions.GetContext(content, loc[0], loc[1])
+
+			if d.exclusionChecker.ShouldExclude(match, context) {
+				continue
+			}
+
+			redactedMatch := types.RedactSecret(match)
 			findings = append(findings, types.Finding{
 				ID:          "SKILL_CONTENT-009",
 				Severity:    types.SeverityHigh,
 				Category:    types.CategorySkillContent,
 				Title:       fmt.Sprintf("Skill '%s' SKILL.md contains a hardcoded secret", s.Slug),
-				Description: fmt.Sprintf("A hardcoded API key or token was found in SKILL.md: %q.", truncate(m, 40)+"..."),
+				Description: fmt.Sprintf("A hardcoded API key or token was found in SKILL.md: %q.", redactedMatch),
 				Remediation: "Remove this skill and rotate the exposed credential immediately.",
 				FilePath:    path,
 				OWASP:       types.OWASPLLM02,

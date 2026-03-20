@@ -139,7 +139,7 @@ func TestSkillContent_A8_PasswordArchive(t *testing.T) {
 
 func TestSkillContent_A9_HardcodedAWSKey(t *testing.T) {
 	d := NewSkillContentDetector()
-	s := skillWith("test", "Use key AKIAIOSFODNN7EXAMPLE for AWS access.\n")
+	s := skillWith("test", "Use key AKIAIOSFODNN7REALKEY for AWS access.\n")
 	findings := d.Detect([]parser.InstalledSkill{s})
 	assertFinding(t, findings, "SKILL_CONTENT-009", types.SeverityHigh)
 }

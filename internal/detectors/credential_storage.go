@@ -5,6 +5,7 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/tttturtle-russ/clawsan/internal/detectors/exclusions"
 	"github.com/tttturtle-russ/clawsan/internal/parser"
 	"github.com/tttturtle-russ/clawsan/internal/types"
 )
@@ -17,10 +18,14 @@ var apiKeyPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`xoxp-[A-Za-z0-9_\-]{20,}`),
 }
 
-type CredentialStorageDetector struct{}
+type CredentialStorageDetector struct {
+	exclusionChecker *exclusions.Checker
+}
 
 func NewCredentialStorageDetector() *CredentialStorageDetector {
-	return &CredentialStorageDetector{}
+	return &CredentialStorageDetector{
+		exclusionChecker: exclusions.NewChecker(),
+	}
 }
 
 func (d *CredentialStorageDetector) Detect(installPath string, workspace *parser.WorkspaceData) []types.Finding {
@@ -96,10 +101,14 @@ func (d *CredentialStorageDetector) checkCred007ApiKeysInMemoryFiles(workspace *
 		}
 		for _, re := range apiKeyPatterns {
 			if loc := re.FindStringIndex(content); loc != nil {
-				snippet := content[loc[0]:loc[1]]
-				if len(snippet) > 20 {
-					snippet = snippet[:8] + "..."
+				match := content[loc[0]:loc[1]]
+				context := exclusions.GetContext(content, loc[0], loc[1])
+
+				if d.exclusionChecker.ShouldExclude(match, context) {
+					continue
 				}
+
+				redactedMatch := types.RedactSecret(match)
 				findings = append(findings, types.Finding{
 					ID:          "CRED-007",
 					Severity:    types.SeverityCritical,
@@ -108,7 +117,7 @@ func (d *CredentialStorageDetector) checkCred007ApiKeysInMemoryFiles(workspace *
 					Description: fmt.Sprintf("A credential matching an API key pattern was found in %s. Memory files are persisted to disk and may be transmitted to AI models.", path),
 					Remediation: "Remove the API key from the memory file immediately. Rotate the compromised credential.",
 					FilePath:    path,
-					Snippet:     snippet,
+					Snippet:     redactedMatch,
 					OWASP:       types.OWASPLLM02,
 					CWE:         "CWE-312: Cleartext Storage of Sensitive Information",
 				})
