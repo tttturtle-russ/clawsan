@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/github/v/release/tttturtle-russ/clawsan)](https://github.com/tttturtle-russ/clawsan/releases/latest)
 
-ClawSanitizer audits your OpenClaw installation against **56 security signals** mapped to the [OWASP Top 10 for LLM Applications 2025](https://owasp.org/www-project-top-10-for-large-language-model-applications/) and CWE. It gives you a security score, grade, and actionable remediation — plus SARIF output for GitHub's Security tab.
+ClawSanitizer audits your OpenClaw installation against **64 security signals** mapped to the [OWASP Top 10 for LLM Applications 2025](https://owasp.org/www-project-top-10-for-large-language-model-applications/) and CWE. It gives you a security score, grade, and actionable remediation — plus SARIF output for GitHub's Security tab.
 
 ```
  ██████╗██╗      █████╗ ██╗    ██╗███████╗ █████╗ ███╗   ██╗
@@ -26,7 +26,7 @@ ClawSanitizer audits your OpenClaw installation against **56 security signals** 
 
   Security Score: 72/100  Grade: C
 
-  Checks run:  56
+  Checks run:  64
   Duration:    142ms
 
   Findings by severity:
@@ -100,7 +100,7 @@ Exit codes:
   2   scanner error (path not found, parse failure, etc.)
 ```
 
-## Security Checks (56 signals)
+## Security Checks (64 signals)
 
 ### Access Control — `AC-*`
 
@@ -112,7 +112,12 @@ Exit codes:
 | AC-003B | HIGH | Channel allowlist contains wildcard '*' | LLM06:2025 | CWE-284: Improper Access Control |
 | AC-004 | HIGH | Execution sandbox is disabled or weakened | LLM06:2025 | CWE-693: Protection Mechanism Failure |
 | AC-005 | CRITICAL | ACP auto-approval is set to 'all' (GHSA-7jx5) | LLM06:2025 | CWE-306: Missing Authentication for Critical Function |
-| AC-006 | MEDIUM | Session DM scope is global across multiple channels | LLM01:2025 | CWE-668: Exposure of Resource to Wrong Sphere |
+| AC-006 | MEDIUM | Session DM scope shares one main session across multiple channels | LLM01:2025 | CWE-668: Exposure of Resource to Wrong Sphere |
+| AC-007 | HIGH | Slash commands can bypass channel access-group policies | LLM06:2025 | CWE-284: Improper Access Control |
+| AC-008 | MEDIUM | identityLinks entry is not provider-prefixed | LLM01:2025 | CWE-20: Improper Input Validation |
+| AC-009 | HIGH | identityLinks peer is linked to multiple canonical identities | LLM01:2025 | CWE-284: Improper Access Control |
+| AC-010 | HIGH | commands.allowFrom contains wildcard sender access | LLM06:2025 | CWE-284: Improper Access Control |
+| AC-011 | HIGH | Open group traffic can activate the agent without an explicit mention | LLM06:2025 | CWE-284: Improper Access Control |
 
 ### Configuration — `CONFIG-*`
 
@@ -130,6 +135,7 @@ Exit codes:
 | CONFIG-010 | CRITICAL | Elevated tools are allowed from any source (wildcard allowFrom) | LLM06:2025 | CWE-250: Execution with Unnecessary Privileges |
 | CONFIG-011 | MEDIUM | mDNS discovery is set to full mode (broadcasts presence on LAN) | LLM06:2025 | CWE-200: Exposure of Sensitive Information to an Unauthorized Actor |
 | CONFIG-012 | HIGH | Real IP fallback is enabled (IP spoofing risk) | LLM06:2025 | CWE-807: Reliance on Untrusted Inputs in a Security Decision |
+| CONFIG-013 | CRITICAL | Node exec is configured for full-access commands without live approval | LLM06:2025 | CWE-250: Execution with Unnecessary Privileges |
 
 ### Credential Storage — `CRED-*`
 
