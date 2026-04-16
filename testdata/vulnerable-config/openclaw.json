@@ -14,5 +14,8 @@
   "agents": { "defaults": { "workspace": "/" } },
   "logging": { "redactSensitive": "off" },
   "discovery": { "mdns": { "mode": "full" } },
-  "tools": { "elevated": { "enabled": true, "allowFrom": { "*": ["*"] } } }
+  "tools": {
+    "elevated": { "enabled": true, "allowFrom": { "*": ["*"] } },
+    "exec": { "host": "node", "security": "full", "ask": "off" }
+  }
 }

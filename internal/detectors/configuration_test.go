@@ -212,3 +212,43 @@ func TestConfiguration_C8_WildcardAllowedOrigins(t *testing.T) {
 		t.Errorf("expected CONFIG-008, got %s", f.ID)
 	}
 }
+
+func TestConfiguration_C13_NodeExecNoApproval(t *testing.T) {
+	d := NewConfigurationDetector()
+	cfg := &types.OpenClawConfig{
+		Gateway: types.GatewayConfig{
+			Auth: types.GatewayAuth{Mode: "token", Token: "valid-token"},
+		},
+		Tools: types.ToolsConfig{
+			Exec: types.ExecConfig{
+				Host:     "node",
+				Security: "full",
+				Ask:      "off",
+			},
+		},
+	}
+	f := d.checkC13NodeExecNoApproval(cfg)
+	if f == nil {
+		t.Fatal("expected CONFIG-013 for no-approval node exec, got nil")
+	}
+	if f.ID != "CONFIG-013" {
+		t.Errorf("expected CONFIG-013, got %s", f.ID)
+	}
+}
+
+func TestConfiguration_C13_NodeExecGuarded_NoFinding(t *testing.T) {
+	d := NewConfigurationDetector()
+	cfg := &types.OpenClawConfig{
+		Tools: types.ToolsConfig{
+			Exec: types.ExecConfig{
+				Host:     "node",
+				Security: "allowlist",
+				Ask:      "on-miss",
+			},
+		},
+	}
+	f := d.checkC13NodeExecNoApproval(cfg)
+	if f != nil {
+		t.Errorf("expected nil for guarded node exec, got %s", f.ID)
+	}
+}

@@ -20,6 +20,9 @@ func TestParseConfig_Vulnerable(t *testing.T) {
 	if cfg.Gateway.Tailscale.Mode != "funnel" {
 		t.Errorf("expected gateway.tailscale.mode=funnel, got %s", cfg.Gateway.Tailscale.Mode)
 	}
+	if cfg.Tools.Exec.Host != "node" {
+		t.Errorf("expected tools.exec.host=node, got %s", cfg.Tools.Exec.Host)
+	}
 }
 
 func TestParseConfig_Clean(t *testing.T) {
@@ -32,6 +35,9 @@ func TestParseConfig_Clean(t *testing.T) {
 	}
 	if cfg.Gateway.Auth.Mode != "password" {
 		t.Errorf("expected gateway.auth.mode=password, got %s", cfg.Gateway.Auth.Mode)
+	}
+	if cfg.Tools.Exec.Security != "allowlist" {
+		t.Errorf("expected tools.exec.security=allowlist, got %s", cfg.Tools.Exec.Security)
 	}
 }
 
@@ -48,4 +54,5 @@ func TestOpenClawConfig_Fields(t *testing.T) {
 	_ = cfg.Gateway.Bind
 	_ = cfg.Gateway.Auth.Token
 	_ = cfg.Gateway.Auth.Mode
+	_ = cfg.Tools.Exec.Host
 }

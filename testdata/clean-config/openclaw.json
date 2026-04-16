@@ -10,5 +10,14 @@
     "trustedProxies": ["127.0.0.1"]
   },
   "agents": { "defaults": { "workspace": "/home/russ/.openclaw/workspace" } },
-  "logging": { "redactSensitive": "tools" }
+  "logging": { "redactSensitive": "tools" },
+  "tools": {
+    "exec": {
+      "host": "gateway",
+      "security": "allowlist",
+      "ask": "on-miss",
+      "strictInlineEval": true,
+      "safeBins": ["git", "jq"]
+    }
+  }
 }

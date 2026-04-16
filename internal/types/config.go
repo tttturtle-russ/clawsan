@@ -96,11 +96,21 @@ type MdnsConfig struct {
 
 type ToolsConfig struct {
 	Elevated ElevatedConfig `json:"elevated"`
+	Exec     ExecConfig     `json:"exec"`
 }
 
 type ElevatedConfig struct {
 	Enabled   bool                   `json:"enabled"`
 	AllowFrom map[string]interface{} `json:"allowFrom"`
+}
+
+type ExecConfig struct {
+	Host             string   `json:"host"`
+	Security         string   `json:"security"`
+	Ask              string   `json:"ask"`
+	Node             string   `json:"node"`
+	StrictInlineEval *bool    `json:"strictInlineEval"`
+	SafeBins         []string `json:"safeBins"`
 }
 
 type MetaConfig struct {

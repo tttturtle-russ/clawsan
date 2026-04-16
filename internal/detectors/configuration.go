@@ -54,6 +54,9 @@ func (d *ConfigurationDetector) Detect(cfg *types.OpenClawConfig) []types.Findin
 	if f := d.checkC12AllowRealIpFallback(cfg); f != nil {
 		findings = append(findings, *f)
 	}
+	if f := d.checkC13NodeExecNoApproval(cfg); f != nil {
+		findings = append(findings, *f)
+	}
 	return findings
 }
 
@@ -259,6 +262,35 @@ func (d *ConfigurationDetector) checkC12AllowRealIpFallback(cfg *types.OpenClawC
 		Remediation: "Set gateway.allowRealIpFallback to false unless you have a trusted reverse proxy that sets these headers.",
 		OWASP:       types.OWASPLLM06,
 		CWE:         "CWE-807: Reliance on Untrusted Inputs in a Security Decision",
+	}
+}
+
+func (d *ConfigurationDetector) checkC13NodeExecNoApproval(cfg *types.OpenClawConfig) *types.Finding {
+	host := strings.ToLower(strings.TrimSpace(cfg.Tools.Exec.Host))
+	if host != "node" {
+		return nil
+	}
+	security := strings.ToLower(strings.TrimSpace(cfg.Tools.Exec.Security))
+	if security == "" {
+		security = "full"
+	}
+	ask := strings.ToLower(strings.TrimSpace(cfg.Tools.Exec.Ask))
+	if ask == "" {
+		ask = "off"
+	}
+	if security != "full" || ask != "off" {
+		return nil
+	}
+	return &types.Finding{
+		ID:          "CONFIG-013",
+		Severity:    types.SeverityCritical,
+		Category:    types.CategoryConfiguration,
+		Title:       "Node exec is configured for full-access commands without live approval",
+		Description: "tools.exec.host=node with security=full and ask=off lets the agent run arbitrary commands on the paired node using the most permissive host-exec path. The formal model treats node execution as the highest-risk capability and assumes explicit approval or command binding around it.",
+		Remediation: "Avoid host=node unless you need remote execution. If you do, require approvals (ask=on-miss or ask=always), reduce security to allowlist, and bind only declared commands on trusted nodes.",
+		FilePath:    "tools.exec",
+		OWASP:       types.OWASPLLM06,
+		CWE:         "CWE-250: Execution with Unnecessary Privileges",
 	}
 }
 
