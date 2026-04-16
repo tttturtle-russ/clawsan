@@ -17,5 +17,17 @@
   "tools": {
     "elevated": { "enabled": true, "allowFrom": { "*": ["*"] } },
     "exec": { "host": "node", "security": "full", "ask": "off" }
+  },
+  "commands": { "useAccessGroups": false },
+  "channels": {
+    "telegram": {},
+    "discord": {}
+  },
+  "session": {
+    "dmScope": "main",
+    "identityLinks": {
+      "wechat:alice": ["telegram:alice", "discord:shared"],
+      "wechat:bob": ["discord:shared", "bob"]
+    }
   }
 }

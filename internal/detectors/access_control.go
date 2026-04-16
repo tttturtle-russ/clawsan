@@ -2,6 +2,7 @@ package detectors
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tttturtle-russ/clawsan/internal/types"
 )
@@ -25,6 +26,11 @@ func (d *AccessControlDetector) Detect(cfg *types.OpenClawConfig) []types.Findin
 	if f := d.checkAC006SessionDmScopeGlobal(cfg); f != nil {
 		findings = append(findings, *f)
 	}
+	if f := d.checkAC007CommandsUseAccessGroups(cfg); f != nil {
+		findings = append(findings, *f)
+	}
+	findings = append(findings, d.checkAC008IdentityLinksFormat(cfg)...)
+	findings = append(findings, d.checkAC009IdentityLinksOverlap(cfg)...)
 	return findings
 }
 
@@ -143,17 +149,120 @@ func (d *AccessControlDetector) checkAC006SessionDmScopeGlobal(cfg *types.OpenCl
 	if len(cfg.Channels) < 2 {
 		return nil
 	}
-	if cfg.Session.DmScope == "global" || cfg.Session.DmScope == "" {
+	scope := normalizedDmScope(cfg)
+	if scope == "main" {
 		return &types.Finding{
 			ID:          "AC-006",
 			Severity:    types.SeverityMedium,
 			Category:    types.CategoryAccessControl,
-			Title:       "Session DM scope is global across multiple channels",
-			Description: fmt.Sprintf("With %d channels configured, session.dmScope=%q allows conversation context from one channel to bleed into another. An attacker in one channel may manipulate the agent's context for actions in another channel.", len(cfg.Channels), cfg.Session.DmScope),
+			Title:       "Session DM scope shares one main session across multiple channels",
+			Description: fmt.Sprintf("With %d channels configured, session.dmScope=%q causes direct-message conversations to reuse the shared main session instead of isolating per peer. A sender in one channel can influence context used for actions in another channel.", len(cfg.Channels), scope),
 			Remediation: "Set session.dmScope to 'per-channel-peer' to isolate context between channels.",
 			OWASP:       types.OWASPLLM01,
 			CWE:         "CWE-668: Exposure of Resource to Wrong Sphere",
 		}
 	}
 	return nil
+}
+
+func (d *AccessControlDetector) checkAC007CommandsUseAccessGroups(cfg *types.OpenClawConfig) *types.Finding {
+	if cfg.Commands.UseAccessGroups == nil || *cfg.Commands.UseAccessGroups {
+		return nil
+	}
+	if len(cfg.Commands.AllowFrom) > 0 {
+		return nil
+	}
+	return &types.Finding{
+		ID:          "AC-007",
+		Severity:    types.SeverityHigh,
+		Category:    types.CategoryAccessControl,
+		Title:       "Slash commands can bypass channel access-group policies",
+		Description: "commands.useAccessGroups is false and commands.allowFrom is not set. This lets slash/control commands skip the allowlists and pairing-derived access groups that protect normal messages.",
+		Remediation: "Set commands.useAccessGroups to true or define explicit commands.allowFrom rules for each trusted sender.",
+		FilePath:    "commands.useAccessGroups",
+		OWASP:       types.OWASPLLM06,
+		CWE:         "CWE-284: Improper Access Control",
+	}
+}
+
+func (d *AccessControlDetector) checkAC008IdentityLinksFormat(cfg *types.OpenClawConfig) []types.Finding {
+	var findings []types.Finding
+	for canonical, peers := range cfg.Session.IdentityLinks {
+		if !hasProviderPrefix(canonical) {
+			findings = append(findings, types.Finding{
+				ID:          "AC-008",
+				Severity:    types.SeverityMedium,
+				Category:    types.CategoryAccessControl,
+				Title:       fmt.Sprintf("identityLinks canonical key %q is not provider-prefixed", canonical),
+				Description: fmt.Sprintf("session.identityLinks[%q] is not formatted as <provider>:<peer>. Cross-channel identity collapse should use provider-prefixed peer IDs so unrelated accounts cannot be merged accidentally.", canonical),
+				Remediation: "Rewrite identityLinks keys and values using provider-prefixed peer IDs like 'wechat:alice' or 'telegram:12345'.",
+				FilePath:    fmt.Sprintf("session.identityLinks.%s", canonical),
+				OWASP:       types.OWASPLLM01,
+				CWE:         "CWE-20: Improper Input Validation",
+			})
+		}
+		for _, peer := range peers {
+			if hasProviderPrefix(peer) {
+				continue
+			}
+			findings = append(findings, types.Finding{
+				ID:          "AC-008",
+				Severity:    types.SeverityMedium,
+				Category:    types.CategoryAccessControl,
+				Title:       fmt.Sprintf("identityLinks peer %q is not provider-prefixed", peer),
+				Description: fmt.Sprintf("session.identityLinks[%q] contains %q, which is missing the <provider>:<peer> prefix. Without that prefix, the DM routing rules cannot safely distinguish identities across channels.", canonical, peer),
+				Remediation: "Rewrite identityLinks keys and values using provider-prefixed peer IDs like 'wechat:alice' or 'telegram:12345'.",
+				FilePath:    fmt.Sprintf("session.identityLinks.%s", canonical),
+				OWASP:       types.OWASPLLM01,
+				CWE:         "CWE-20: Improper Input Validation",
+			})
+		}
+	}
+	return findings
+}
+
+func (d *AccessControlDetector) checkAC009IdentityLinksOverlap(cfg *types.OpenClawConfig) []types.Finding {
+	var findings []types.Finding
+	owners := make(map[string]string)
+	for canonical, peers := range cfg.Session.IdentityLinks {
+		for _, peer := range peers {
+			peer = strings.TrimSpace(peer)
+			if peer == "" {
+				continue
+			}
+			if owner, exists := owners[peer]; exists && owner != canonical {
+				findings = append(findings, types.Finding{
+					ID:          "AC-009",
+					Severity:    types.SeverityHigh,
+					Category:    types.CategoryAccessControl,
+					Title:       fmt.Sprintf("identityLinks peer %q is linked to multiple canonical identities", peer),
+					Description: fmt.Sprintf("session.identityLinks maps %q to both %q and %q. That collapses unrelated DM identities into the same routing group and weakens the explicit-link-only session isolation described by the formal model.", peer, owner, canonical),
+					Remediation: "Ensure each provider-prefixed peer appears in exactly one identityLinks group.",
+					FilePath:    fmt.Sprintf("session.identityLinks.%s", canonical),
+					OWASP:       types.OWASPLLM01,
+					CWE:         "CWE-284: Improper Access Control",
+				})
+				continue
+			}
+			owners[peer] = canonical
+		}
+	}
+	return findings
+}
+
+func normalizedDmScope(cfg *types.OpenClawConfig) string {
+	scope := strings.ToLower(strings.TrimSpace(cfg.Session.DmScope))
+	if scope == "" {
+		return "main"
+	}
+	return scope
+}
+
+func hasProviderPrefix(value string) bool {
+	value = strings.TrimSpace(value)
+	if strings.Count(value, ":") < 1 {
+		return false
+	}
+	parts := strings.SplitN(value, ":", 2)
+	return strings.TrimSpace(parts[0]) != "" && strings.TrimSpace(parts[1]) != ""
 }

@@ -7,6 +7,7 @@ type OpenClawConfig struct {
 	Logging   LoggingConfig            `json:"logging"`
 	Discovery DiscoveryConfig          `json:"discovery"`
 	Tools     ToolsConfig              `json:"tools"`
+	Commands  CommandsConfig           `json:"commands"`
 	Meta      MetaConfig               `json:"meta"`
 	Channels  map[string]ChannelConfig `json:"channels"`
 	Models    ModelsConfig             `json:"models"`
@@ -113,13 +114,19 @@ type ExecConfig struct {
 	SafeBins         []string `json:"safeBins"`
 }
 
+type CommandsConfig struct {
+	AllowFrom       map[string][]string `json:"allowFrom"`
+	UseAccessGroups *bool               `json:"useAccessGroups"`
+}
+
 type MetaConfig struct {
 	LastTouchedVersion string `json:"lastTouchedVersion"`
 	LastTouchedAt      string `json:"lastTouchedAt"`
 }
 
 type SessionConfig struct {
-	DmScope string `json:"dmScope"`
+	DmScope       string              `json:"dmScope"`
+	IdentityLinks map[string][]string `json:"identityLinks"`
 }
 
 type AcpConfig struct {

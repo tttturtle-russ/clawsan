@@ -23,6 +23,15 @@ func TestParseConfig_Vulnerable(t *testing.T) {
 	if cfg.Tools.Exec.Host != "node" {
 		t.Errorf("expected tools.exec.host=node, got %s", cfg.Tools.Exec.Host)
 	}
+	if cfg.Commands.UseAccessGroups == nil || *cfg.Commands.UseAccessGroups {
+		t.Fatal("expected commands.useAccessGroups=false")
+	}
+	if cfg.Session.DmScope != "main" {
+		t.Errorf("expected session.dmScope=main, got %s", cfg.Session.DmScope)
+	}
+	if len(cfg.Session.IdentityLinks) != 2 {
+		t.Errorf("expected 2 identityLinks entries, got %d", len(cfg.Session.IdentityLinks))
+	}
 }
 
 func TestParseConfig_Clean(t *testing.T) {
@@ -38,6 +47,12 @@ func TestParseConfig_Clean(t *testing.T) {
 	}
 	if cfg.Tools.Exec.Security != "allowlist" {
 		t.Errorf("expected tools.exec.security=allowlist, got %s", cfg.Tools.Exec.Security)
+	}
+	if cfg.Commands.UseAccessGroups == nil || !*cfg.Commands.UseAccessGroups {
+		t.Fatal("expected commands.useAccessGroups=true")
+	}
+	if cfg.Session.DmScope != "per-channel-peer" {
+		t.Errorf("expected session.dmScope=per-channel-peer, got %s", cfg.Session.DmScope)
 	}
 }
 
@@ -55,4 +70,6 @@ func TestOpenClawConfig_Fields(t *testing.T) {
 	_ = cfg.Gateway.Auth.Token
 	_ = cfg.Gateway.Auth.Mode
 	_ = cfg.Tools.Exec.Host
+	_ = cfg.Commands.UseAccessGroups
+	_ = cfg.Session.IdentityLinks
 }

@@ -19,5 +19,16 @@
       "strictInlineEval": true,
       "safeBins": ["git", "jq"]
     }
+  },
+  "commands": { "useAccessGroups": true },
+  "channels": {
+    "telegram": {},
+    "discord": {}
+  },
+  "session": {
+    "dmScope": "per-channel-peer",
+    "identityLinks": {
+      "wechat:alice": ["telegram:alice", "discord:alice"]
+    }
   }
 }

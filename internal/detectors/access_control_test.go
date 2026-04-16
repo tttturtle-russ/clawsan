@@ -151,11 +151,11 @@ func TestAccessControl_AC006_SessionDmScopeGlobal_MultiChannel(t *testing.T) {
 			"chan-a": {},
 			"chan-b": {},
 		},
-		Session: types.SessionConfig{DmScope: "global"},
+		Session: types.SessionConfig{DmScope: "main"},
 	}
 	f := d.checkAC006SessionDmScopeGlobal(cfg)
 	if f == nil {
-		t.Fatal("expected AC-006 for global dmScope with 2+ channels")
+		t.Fatal("expected AC-006 for main dmScope with 2+ channels")
 	}
 	if f.ID != "AC-006" {
 		t.Errorf("expected AC-006, got %s", f.ID)
@@ -168,11 +168,80 @@ func TestAccessControl_AC006_SingleChannel_NoFinding(t *testing.T) {
 		Channels: map[string]types.ChannelConfig{
 			"only-channel": {},
 		},
-		Session: types.SessionConfig{DmScope: "global"},
+		Session: types.SessionConfig{DmScope: "main"},
 	}
 	f := d.checkAC006SessionDmScopeGlobal(cfg)
 	if f != nil {
 		t.Errorf("expected nil for single channel, got %s", f.ID)
+	}
+}
+
+func TestAccessControl_AC007_CommandsUseAccessGroupsFalse(t *testing.T) {
+	d := NewAccessControlDetector()
+	useAccessGroups := false
+	cfg := &types.OpenClawConfig{
+		Commands: types.CommandsConfig{UseAccessGroups: &useAccessGroups},
+	}
+	f := d.checkAC007CommandsUseAccessGroups(cfg)
+	if f == nil {
+		t.Fatal("expected AC-007 when commands.useAccessGroups=false")
+	}
+	if f.ID != "AC-007" {
+		t.Errorf("expected AC-007, got %s", f.ID)
+	}
+}
+
+func TestAccessControl_AC007_AllowFromOverridesUseAccessGroups(t *testing.T) {
+	d := NewAccessControlDetector()
+	useAccessGroups := false
+	cfg := &types.OpenClawConfig{
+		Commands: types.CommandsConfig{
+			UseAccessGroups: &useAccessGroups,
+			AllowFrom: map[string][]string{
+				"telegram:alice": {"/exec"},
+			},
+		},
+	}
+	f := d.checkAC007CommandsUseAccessGroups(cfg)
+	if f != nil {
+		t.Errorf("expected nil when commands.allowFrom is configured, got %s", f.ID)
+	}
+}
+
+func TestAccessControl_AC008_InvalidIdentityLinksFormat(t *testing.T) {
+	d := NewAccessControlDetector()
+	cfg := &types.OpenClawConfig{
+		Session: types.SessionConfig{
+			IdentityLinks: map[string][]string{
+				"wechat:alice": {"telegram:alice", "alice"},
+			},
+		},
+	}
+	findings := d.checkAC008IdentityLinksFormat(cfg)
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 AC-008 finding, got %d", len(findings))
+	}
+	if findings[0].ID != "AC-008" {
+		t.Errorf("expected AC-008, got %s", findings[0].ID)
+	}
+}
+
+func TestAccessControl_AC009_OverlappingIdentityLinks(t *testing.T) {
+	d := NewAccessControlDetector()
+	cfg := &types.OpenClawConfig{
+		Session: types.SessionConfig{
+			IdentityLinks: map[string][]string{
+				"wechat:alice": {"telegram:alice", "discord:shared"},
+				"wechat:bob":   {"discord:shared"},
+			},
+		},
+	}
+	findings := d.checkAC009IdentityLinksOverlap(cfg)
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 AC-009 finding, got %d", len(findings))
+	}
+	if findings[0].ID != "AC-009" {
+		t.Errorf("expected AC-009, got %s", findings[0].ID)
 	}
 }
 
