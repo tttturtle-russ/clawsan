@@ -32,6 +32,13 @@ func TestParseConfig_Vulnerable(t *testing.T) {
 	if len(cfg.Session.IdentityLinks) != 2 {
 		t.Errorf("expected 2 identityLinks entries, got %d", len(cfg.Session.IdentityLinks))
 	}
+	if cfg.Commands.AllowFrom["*"][0] != "*" {
+		t.Fatalf("expected wildcard commands.allowFrom entry in vulnerable fixture")
+	}
+	telegramWildcard := cfg.Channels["telegram"].Groups["*"]
+	if telegramWildcard.RequireMention == nil || *telegramWildcard.RequireMention {
+		t.Fatal("expected telegram wildcard group requireMention=false")
+	}
 }
 
 func TestParseConfig_Clean(t *testing.T) {
@@ -54,6 +61,13 @@ func TestParseConfig_Clean(t *testing.T) {
 	if cfg.Session.DmScope != "per-channel-peer" {
 		t.Errorf("expected session.dmScope=per-channel-peer, got %s", cfg.Session.DmScope)
 	}
+	if cfg.Commands.AllowFrom["telegram"][0] != "telegram:alice" {
+		t.Fatalf("expected explicit telegram commands.allowFrom entry in clean fixture")
+	}
+	telegramWildcard := cfg.Channels["telegram"].Groups["*"]
+	if telegramWildcard.RequireMention == nil || !*telegramWildcard.RequireMention {
+		t.Fatal("expected telegram wildcard group requireMention=true")
+	}
 }
 
 func TestParseConfig_MissingFile(t *testing.T) {
@@ -71,5 +85,8 @@ func TestOpenClawConfig_Fields(t *testing.T) {
 	_ = cfg.Gateway.Auth.Mode
 	_ = cfg.Tools.Exec.Host
 	_ = cfg.Commands.UseAccessGroups
+	_ = cfg.Commands.AllowFrom
 	_ = cfg.Session.IdentityLinks
+	_ = cfg.Channels["example"].RequireMention
+	_ = cfg.Channels["example"].Groups
 }

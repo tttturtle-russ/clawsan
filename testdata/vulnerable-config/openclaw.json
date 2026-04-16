@@ -18,9 +18,19 @@
     "elevated": { "enabled": true, "allowFrom": { "*": ["*"] } },
     "exec": { "host": "node", "security": "full", "ask": "off" }
   },
-  "commands": { "useAccessGroups": false },
+  "commands": {
+    "useAccessGroups": false,
+    "allowFrom": {
+      "*": ["*"]
+    }
+  },
   "channels": {
-    "telegram": {},
+    "telegram": {
+      "groupPolicy": "open",
+      "groups": {
+        "*": { "requireMention": false }
+      }
+    },
     "discord": {}
   },
   "session": {

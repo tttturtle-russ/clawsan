@@ -110,7 +110,7 @@ func Scan(path string) (*types.ScanResult, error) {
 		Findings:    allFindings,
 		Score:       score,
 		Grade:       grade,
-		TotalChecks: 62,
+		TotalChecks: 64,
 		Warnings:    warnings,
 		ScannedPath: path,
 		ScannedAt:   start,

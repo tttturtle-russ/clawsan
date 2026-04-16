@@ -31,6 +31,8 @@ func (d *AccessControlDetector) Detect(cfg *types.OpenClawConfig) []types.Findin
 	}
 	findings = append(findings, d.checkAC008IdentityLinksFormat(cfg)...)
 	findings = append(findings, d.checkAC009IdentityLinksOverlap(cfg)...)
+	findings = append(findings, d.checkAC010CommandsWildcardAllowFrom(cfg)...)
+	findings = append(findings, d.checkAC011OpenGroupsWithoutMentionGate(cfg)...)
 	return findings
 }
 
@@ -246,6 +248,78 @@ func (d *AccessControlDetector) checkAC009IdentityLinksOverlap(cfg *types.OpenCl
 			}
 			owners[peer] = canonical
 		}
+	}
+	return findings
+}
+
+func (d *AccessControlDetector) checkAC010CommandsWildcardAllowFrom(cfg *types.OpenClawConfig) []types.Finding {
+	var findings []types.Finding
+	for provider, senders := range cfg.Commands.AllowFrom {
+		for _, sender := range senders {
+			if strings.TrimSpace(sender) != "*" {
+				continue
+			}
+			findings = append(findings, types.Finding{
+				ID:          "AC-010",
+				Severity:    types.SeverityHigh,
+				Category:    types.CategoryAccessControl,
+				Title:       fmt.Sprintf("commands.allowFrom for %q contains wildcard sender '*'", provider),
+				Description: fmt.Sprintf("commands.allowFrom[%q] includes '*'. Control or slash commands are then executable by any sender matched by that provider scope, bypassing pairing-derived access groups and channel allowlists.", provider),
+				Remediation: "Replace wildcard senders in commands.allowFrom with explicit trusted peer IDs, or remove commands.allowFrom and rely on useAccessGroups.",
+				FilePath:    fmt.Sprintf("commands.allowFrom.%s", provider),
+				OWASP:       types.OWASPLLM06,
+				CWE:         "CWE-284: Improper Access Control",
+			})
+			break
+		}
+	}
+	return findings
+}
+
+func (d *AccessControlDetector) checkAC011OpenGroupsWithoutMentionGate(cfg *types.OpenClawConfig) []types.Finding {
+	var findings []types.Finding
+	for provider, channel := range cfg.Channels {
+		if strings.ToLower(strings.TrimSpace(channel.GroupPolicy)) != "open" {
+			continue
+		}
+		if channel.RequireMention != nil && !*channel.RequireMention {
+			findings = append(findings, types.Finding{
+				ID:          "AC-011",
+				Severity:    types.SeverityHigh,
+				Category:    types.CategoryAccessControl,
+				Title:       fmt.Sprintf("Channel %q allows open group activation without mention gating", provider),
+				Description: fmt.Sprintf("The channel %q sets groupPolicy=open and requireMention=false. Any group message reaching the provider can activate the agent without an explicit mention.", provider),
+				Remediation: "Set requireMention to true for group traffic, or change groupPolicy to allowlist and restrict which groups can trigger the agent.",
+				FilePath:    fmt.Sprintf("channels.%s.requireMention", provider),
+				OWASP:       types.OWASPLLM06,
+				CWE:         "CWE-284: Improper Access Control",
+			})
+		}
+
+		for groupID, group := range channel.Groups {
+			findings = append(findings, d.findMentionBypassInGroup(provider, "groups."+groupID, group)...)
+		}
+	}
+	return findings
+}
+
+func (d *AccessControlDetector) findMentionBypassInGroup(provider, location string, group types.ChannelGroupRule) []types.Finding {
+	var findings []types.Finding
+	if group.RequireMention != nil && !*group.RequireMention {
+		findings = append(findings, types.Finding{
+			ID:          "AC-011",
+			Severity:    types.SeverityHigh,
+			Category:    types.CategoryAccessControl,
+			Title:       fmt.Sprintf("Channel %q disables mention gating for %s", provider, location),
+			Description: fmt.Sprintf("The channel %q has groupPolicy=open and %s.requireMention=false. Messages in that reachable group scope can activate the agent without an explicit mention.", provider, location),
+			Remediation: "Set requireMention to true for this group or topic, or stop using groupPolicy=open for providers that accept broad group traffic.",
+			FilePath:    fmt.Sprintf("channels.%s.%s.requireMention", provider, location),
+			OWASP:       types.OWASPLLM06,
+			CWE:         "CWE-284: Improper Access Control",
+		})
+	}
+	for topicID, topic := range group.Topics {
+		findings = append(findings, d.findMentionBypassInGroup(provider, location+".topics."+topicID, topic)...)
 	}
 	return findings
 }

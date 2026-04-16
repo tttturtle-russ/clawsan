@@ -138,15 +138,25 @@ type SandboxConfig struct {
 }
 
 type ChannelConfig struct {
-	LoginMode   string            `json:"loginMode"`
-	Environment string            `json:"environment"`
-	QClaw       *QClawCredentials `json:"qclaw,omitempty"`
-	WorkBuddy   map[string]any    `json:"workbuddy,omitempty"`
-	Accounts    map[string]any    `json:"accounts,omitempty"`
-	DmPolicy    string            `json:"dmPolicy"`
-	GroupPolicy string            `json:"groupPolicy"`
-	AllowFrom   []string          `json:"allowFrom"`
-	AllowList   []string          `json:"allowlist"`
+	LoginMode      string                      `json:"loginMode"`
+	Environment    string                      `json:"environment"`
+	QClaw          *QClawCredentials           `json:"qclaw,omitempty"`
+	WorkBuddy      map[string]any              `json:"workbuddy,omitempty"`
+	Accounts       map[string]any              `json:"accounts,omitempty"`
+	DmPolicy       string                      `json:"dmPolicy"`
+	GroupPolicy    string                      `json:"groupPolicy"`
+	AllowFrom      []string                    `json:"allowFrom"`
+	AllowList      []string                    `json:"allowlist"`
+	GroupAllowFrom []string                    `json:"groupAllowFrom"`
+	RequireMention *bool                       `json:"requireMention,omitempty"`
+	Groups         map[string]ChannelGroupRule `json:"groups,omitempty"`
+}
+
+type ChannelGroupRule struct {
+	Allow          *bool                       `json:"allow,omitempty"`
+	RequireMention *bool                       `json:"requireMention,omitempty"`
+	AllowFrom      []string                    `json:"allowFrom,omitempty"`
+	Topics         map[string]ChannelGroupRule `json:"topics,omitempty"`
 }
 
 type QClawCredentials struct {

@@ -28,7 +28,7 @@ func TestScan_VulnerableConfig(t *testing.T) {
 
 	assert.NotEmpty(t, result.Findings)
 	assert.Less(t, result.Score, 100)
-	assert.Equal(t, 62, result.TotalChecks)
+	assert.Equal(t, 64, result.TotalChecks)
 
 	hasCritical := false
 	hasSupplyChain := false

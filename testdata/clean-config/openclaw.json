@@ -20,9 +20,19 @@
       "safeBins": ["git", "jq"]
     }
   },
-  "commands": { "useAccessGroups": true },
+  "commands": {
+    "useAccessGroups": true,
+    "allowFrom": {
+      "telegram": ["telegram:alice"]
+    }
+  },
   "channels": {
-    "telegram": {},
+    "telegram": {
+      "groupPolicy": "allowlist",
+      "groups": {
+        "*": { "requireMention": true }
+      }
+    },
     "discord": {}
   },
   "session": {

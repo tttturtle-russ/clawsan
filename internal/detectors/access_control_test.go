@@ -245,6 +245,100 @@ func TestAccessControl_AC009_OverlappingIdentityLinks(t *testing.T) {
 	}
 }
 
+func TestAccessControl_AC010_CommandsWildcardAllowFrom(t *testing.T) {
+	d := NewAccessControlDetector()
+	cfg := &types.OpenClawConfig{
+		Commands: types.CommandsConfig{
+			AllowFrom: map[string][]string{
+				"*": {"*"},
+			},
+		},
+	}
+	findings := d.checkAC010CommandsWildcardAllowFrom(cfg)
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 AC-010 finding, got %d", len(findings))
+	}
+	if findings[0].ID != "AC-010" {
+		t.Errorf("expected AC-010, got %s", findings[0].ID)
+	}
+}
+
+func TestAccessControl_AC010_ExplicitSenders_NoFinding(t *testing.T) {
+	d := NewAccessControlDetector()
+	cfg := &types.OpenClawConfig{
+		Commands: types.CommandsConfig{
+			AllowFrom: map[string][]string{
+				"telegram": {"telegram:alice"},
+			},
+		},
+	}
+	findings := d.checkAC010CommandsWildcardAllowFrom(cfg)
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 AC-010 findings, got %d", len(findings))
+	}
+}
+
+func TestAccessControl_AC011_ChannelRequireMentionFalseWithOpenGroups(t *testing.T) {
+	d := NewAccessControlDetector()
+	requireMention := false
+	cfg := &types.OpenClawConfig{
+		Channels: map[string]types.ChannelConfig{
+			"telegram": {
+				GroupPolicy:    "open",
+				RequireMention: &requireMention,
+			},
+		},
+	}
+	findings := d.checkAC011OpenGroupsWithoutMentionGate(cfg)
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 AC-011 finding, got %d", len(findings))
+	}
+	if findings[0].ID != "AC-011" {
+		t.Errorf("expected AC-011, got %s", findings[0].ID)
+	}
+}
+
+func TestAccessControl_AC011_GroupWildcardRequireMentionFalse(t *testing.T) {
+	d := NewAccessControlDetector()
+	requireMention := false
+	cfg := &types.OpenClawConfig{
+		Channels: map[string]types.ChannelConfig{
+			"telegram": {
+				GroupPolicy: "open",
+				Groups: map[string]types.ChannelGroupRule{
+					"*": {RequireMention: &requireMention},
+				},
+			},
+		},
+	}
+	findings := d.checkAC011OpenGroupsWithoutMentionGate(cfg)
+	if len(findings) != 1 {
+		t.Fatalf("expected 1 AC-011 finding, got %d", len(findings))
+	}
+	if findings[0].ID != "AC-011" {
+		t.Errorf("expected AC-011, got %s", findings[0].ID)
+	}
+}
+
+func TestAccessControl_AC011_RequireMentionTrue_NoFinding(t *testing.T) {
+	d := NewAccessControlDetector()
+	requireMention := true
+	cfg := &types.OpenClawConfig{
+		Channels: map[string]types.ChannelConfig{
+			"telegram": {
+				GroupPolicy: "open",
+				Groups: map[string]types.ChannelGroupRule{
+					"*": {RequireMention: &requireMention},
+				},
+			},
+		},
+	}
+	findings := d.checkAC011OpenGroupsWithoutMentionGate(cfg)
+	if len(findings) != 0 {
+		t.Fatalf("expected 0 AC-011 findings, got %d", len(findings))
+	}
+}
+
 func TestAccessControl_NilConfig_NoFindings(t *testing.T) {
 	d := NewAccessControlDetector()
 	findings := d.Detect(nil)
